@@ -70,6 +70,10 @@
         <img src="https://cdn-icons-png.flaticon.com/512/32/32195.png" alt="Track Order" />
         <label>Track Order</label>
     </div>
+    <div id="energy-toggle-container" style="display: none;">
+      <button onclick="toggleEnergyGraph()">Energy</button>
+    </div>
+    <div id="energy-graph" style="width: 300px; height: 200px; float: right;"></div>
   </div>
 
   <svg width="700" height="700"></svg>
@@ -171,6 +175,7 @@
 
     let fullData = [];
     let showArrows = false;
+    let energyGraphVisible = false;
 
     d3.csv("https://raw.githubusercontent.com/wodziaka/beatlesData/refs/heads/main/BeatlesUpdatedDataSet.csv", d => {
       return {
@@ -214,9 +219,9 @@
     }
 
     function toggleArrows() {
-        showArrows = !showArrows;
-        g.selectAll(".track-arrow").remove();
-        drawPoints(fullData);
+      showArrows = !showArrows;
+      g.selectAll(".track-arrow").remove();
+      drawPoints(fullData);
     }
 
     function drawPoints(data) {
@@ -236,27 +241,97 @@
 
       circles.exit().remove();
       if (showArrows) {
-          drawArrows(data);
+        drawArrows(data);
       }
     }
 
     function filterData(album) {
-        g.selectAll("circle").remove();
-        g.selectAll(".track-arrow").remove();
+      if (album === "All") {
+        document.getElementById("energy-toggle-container").style.display = "none";
+        d3.select("#energy-graph").selectAll("*").remove();
+      } else {
+        document.getElementById("energy-toggle-container").style.display = "block";
+      }
+      g.selectAll("circle").remove();
+      g.selectAll(".track-arrow").remove();
 
-        let filteredData;
-        if (album === "All") {
-            filteredData = fullData;
-        } else {
-            filteredData = fullData.filter(d => d.album === album);
-        }
+      let filteredData;
+      if (album === "All") {
+        filteredData = fullData;
+      } else {
+        filteredData = fullData.filter(d => d.album === album);
+      }
 
-        drawPoints(filteredData);
+      drawPoints(filteredData);
 
-        if (showArrows) {
-            drawArrows(filteredData);
-        }
+      if (showArrows) {
+          drawArrows(filteredData);
+      }
     }
+    function toggleEnergyGraph() {
+      energyGraphVisible = !energyGraphVisible;
+      if (energyGraphVisible) {
+        drawEnergyGraph();
+      } else {
+        d3.select("#energy-graph").selectAll("*").remove();
+      }
+    }
+    
+    function drawEnergyGraph() {
+      const albumTracks = fullData.filter(d => d.album === currentAlbum && d.albumPosition > 0)
+        .sort((a, b) => a.albumPosition - b.albumPosition);
+
+      const svgWidth = 300, svgHeight = 200;
+      const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+      const width = svgWidth - margin.left - margin.right;
+      const height = svgHeight - margin.top - margin.bottom;
+
+      d3.select("#energy-graph").selectAll("*").remove();
+
+      const svg = d3.select("#energy-graph")
+        .append("svg")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight);
+
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(albumTracks, d => d.albumPosition))
+        .range([0, width]);
+
+      const y = d3.scaleLinear()
+        .domain([0, 1]) // Energy is normalized
+        .range([height, 0]);
+
+      const line = d3.line()
+        .x(d => x(d.albumPosition))
+        .y(d => y(d.energy));
+
+      g.append("path")
+        .datum(albumTracks)
+        .attr("fill", "none")
+        .attr("stroke", "#f067c0")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+      g.append("g").call(d3.axisLeft(y).ticks(5));
+      g.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(albumTracks.length));
+
+      svg.append("text")
+        .attr("x", svgWidth / 2)
+        .attr("y", svgHeight - 5)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .text("Track Number");
+
+      svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -svgHeight / 2)
+        .attr("y", 12)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .text("Energy");
+    }  
   </script>
 </body>
 </html>
