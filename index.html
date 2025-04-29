@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Beatles Energy vs Danceability</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Corben:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f0f0ed;
+      font-family: 'Corben', sans-serif;
+      margin: 30px;
+    }
+    .button-container {
+      margin-bottom: 20px;
+    }
+    .image-button {
+      display: inline-block;
+      text-align: center;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .image-button img {
+      width: 105px;
+      height: 90px;
+      border-radius: 4px;
+      transition: outline 0.2s ease;
+    }
+    .image-button:hover img {
+      outline: 3px solid #6ddb3d;
+    }
+    .image-button label {
+      display: block;
+      margin-top: 5px;
+      font-size: 14px;
+    }
+    svg {
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h2>Beatles Album Energy vs Danceability</h2>
+  <div class="button-container">
+    <div class="image-button" onclick="filterData('All')">
+      <img src="https://d3nt9em9l1urz8.cloudfront.net/media/catalog/product/cache/3/image/9df78eab33525d08d6e5fb8d27136e95/0/0/0083_210324_mym6aj_h.jpg" alt="All Albums" />
+      <label>All Albums</label>
+    </div>
+    <div class="image-button" onclick="filterData('Rubber Soul')">
+      <img src="https://upload.wikimedia.org/wikipedia/en/5/5b/Rubber_Soul.png" alt="Rubber Soul" />
+      <label>Rubber Soul</label>
+    </div>
+    <div class="image-button" onclick="filterData('Revolver')">
+      <img src="https://i.scdn.co/image/ab67616d0000b27328b8b9b46428896e6491e97a" alt="Revolver" />
+      <label>Revolver</label>
+    </div>
+    <div class="image-button" onclick="filterData('Sgt. Pepper\'s Lonely Hearts Club Band')">
+      <img src="https://i.scdn.co/image/ab67616d0000b27334ef8f7d06cf2fc2146f420a" alt="Sgt. Pepper's" />
+      <label>Sgt. Pepper's</label>
+    </div>
+    <div class="image-button" onclick="filterData('The Beatles')">
+      <img src="https://i.scdn.co/image/ab67616d0000b2734ce8b4e42588bf18182a1ad2" alt="The Beatles" />
+      <label>White Album</label>
+    </div>
+    <div class="image-button" onclick="filterData('Abbey Road')">
+      <img src="https://i.scdn.co/image/ab67616d0000b273dc30583ba717007b00cceb25" alt="Abbey Road" />
+      <label>Abbey Road</label>
+    </div>
+    <div class="image-button" onclick="toggleArrows()">
+        <img src="https://cdn-icons-png.flaticon.com/512/32/32195.png" alt="Track Order" />
+        <label>Track Order</label>
+    </div>
+  </div>
+
+  <svg width="700" height="700"></svg>
+
+  <script>
+    const width = 700, height = 700;
+    const margin = { top: 20, right: 20, bottom: 60, left: 60 };
+
+    const svg = d3.select("svg");
+    const defs = svg.append("defs");
+
+    defs.append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 0 10 10")
+        .attr("refX", 10)
+        .attr("refY", 5)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto-start-reverse")
+        .append("path")
+        .attr("d", "M 0 0 L 10 5 L 0 10 z")
+        .attr("fill", "black");
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    const x = d3.scaleLinear().domain([0, 1]).range([0, innerWidth]);
+    const y = d3.scaleLinear().domain([0, 1]).range([innerHeight, 0]);
+
+    // Quadrant Backgrounds
+    g.append("rect")
+        .attr("x", x(0))
+        .attr("y", y(.5))
+        .attr("width", x(0.5) - x(0))
+        .attr("height", y(0) - y(0.5))
+        .attr("fill", "#8aeb60") // subtle lime green for low energy, low danceability
+        .attr("opacity", 0.3);
+
+    g.append("rect")
+        .attr("x", x(0))
+        .attr("y", y(1))
+        .attr("width", x(1) - x(0))
+        .attr("height", y(0) - y(0.5))
+        .attr("fill", "#f067c0") // subtle pink for high energy, low danceability
+        .attr("opacity", 0.3);
+
+    g.append("rect")
+        .attr("x", x(0.5))
+        .attr("y", y(1))
+        .attr("width", x(1) - x(0.5))
+        .attr("height", y(.5) - y(1.5))
+        .attr("fill", "#5bd9f5") // subtle turquoise for high energy, high danceability
+        .attr("opacity", 0.3);
+
+    // Axes
+    g.append("g")
+      .attr("transform", `translate(0,${y(0.5)})`)
+      .call(d3.axisBottom(x).ticks(10));
+
+    g.append("g")
+      .attr("transform", `translate(${x(0.5)},0)`)
+      .call(d3.axisLeft(y).ticks(10));
+
+    // Axis Labels
+    svg.append("text")
+      .attr("x", margin.left + innerWidth / 2)
+      .attr("y", height - 15)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "14px")
+      .text("Energy");
+
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -margin.top - innerHeight / 2)
+      .attr("y", 15)
+      .attr("text-anchor", "middle")
+      .attr("font-size", "14px")
+      .text("Danceability");
+
+    // Center lines
+    g.append("line")
+      .attr("x1", x(0.5)).attr("y1", 0)
+      .attr("x2", x(0.5)).attr("y2", innerHeight)
+      .attr("stroke", "#aaa").attr("stroke-dasharray", "4");
+
+    g.append("line")
+      .attr("x1", 0).attr("y1", y(0.5))
+      .attr("x2", innerWidth).attr("y2", y(0.5))
+      .attr("stroke", "#aaa").attr("stroke-dasharray", "4");
+
+    const albumColors = {
+      "Rubber Soul": { fill: "#c95c19", stroke: "#08533e" },
+      "Revolver": { fill: "black", stroke: "black" },
+      "Sgt. Pepper's Lonely Hearts Club Band": { fill: "#f8dc3b", stroke: "#E00A86" },
+      "The Beatles": { fill: "white", stroke: "black" },
+      "Abbey Road": { fill: "#addbf3", stroke: "#545a5c" }
+    };
+
+    let fullData = [];
+    let showArrows = false;
+
+    d3.csv("https://raw.githubusercontent.com/wodziaka/beatlesData/refs/heads/main/BeatlesUpdatedDataSet.csv", d => {
+      return {
+        title: d.Title,
+        album: d['Album.debut'],
+        energy: +d.Energy,
+        danceability: +d.danceability,
+        albumPosition: +d['Album Position']
+      };
+    }).then(data => {
+      fullData = data.filter(d =>
+        ["Rubber Soul", "Revolver", "Sgt. Pepper's Lonely Hearts Club Band", "The Beatles", "Abbey Road"].includes(d.album)
+        && d.energy > 0 && d.danceability > 0
+      );
+      drawPoints(fullData);
+    });
+
+    function drawArrows(data) {
+        const albums = d3.group(data, d => d.album);
+
+        albums.forEach(tracks => {
+            const sortedTracks = tracks
+                .filter(d => d.albumPosition > 0)
+                .sort((a, b) => d3.ascending(a.albumPosition, b.albumPosition));
+
+            for (let i = 0; i < sortedTracks.length - 1; i++) {
+                const from = sortedTracks[i];
+                const to = sortedTracks[i + 1];
+
+                g.append("line")
+                    .attr("class", "track-arrow")
+                    .attr("x1", x(from.energy))
+                    .attr("y1", y(from.danceability))
+                    .attr("x2", x(to.energy))
+                    .attr("y2", y(to.danceability))
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 1.5)
+                    .attr("marker-end", "url(#arrow)");
+            }
+        });
+    }
+
+    function toggleArrows() {
+        showArrows = !showArrows;
+        g.selectAll(".track-arrow").remove();
+        drawPoints(fullData);
+    }
+
+    function drawPoints(data) {
+      const circles = g.selectAll("circle").data(data, d => d.title);
+
+      circles.enter()
+        .append("circle")
+        .attr("cx", d => x(d.energy))
+        .attr("cy", d => y(d.danceability))
+        .attr("r", 6)
+        .attr("fill", d => albumColors[d.album].fill)
+        .attr("stroke", d => albumColors[d.album].stroke)
+        .attr("stroke-width", 2.5)
+        .attr("opacity", 0.8)
+        .append("title")
+        .text(d => d.title);
+
+      circles.exit().remove();
+      if (showArrows) {
+          drawArrows(data);
+      }
+    }
+
+    function filterData(album) {
+        g.selectAll("circle").remove();
+        g.selectAll(".track-arrow").remove();
+
+        let filteredData;
+        if (album === "All") {
+            filteredData = fullData;
+        } else {
+            filteredData = fullData.filter(d => d.album === album);
+        }
+
+        drawPoints(filteredData);
+
+        if (showArrows) {
+            drawArrows(filteredData);
+        }
+    }
+  </script>
+</body>
+</html>
