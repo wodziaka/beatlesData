@@ -249,8 +249,11 @@
       if (album === "All") {
         document.getElementById("energy-toggle-container").style.display = "none";
         d3.select("#energy-graph").selectAll("*").remove();
+        drawPoints(fullData);
       } else {
         document.getElementById("energy-toggle-container").style.display = "block";
+        const filtered = fullData.filter(d => d.album === album);
+        drawPoints(filtered);
       }
       g.selectAll("circle").remove();
       g.selectAll(".track-arrow").remove();
